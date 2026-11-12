@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="am">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#123a72">
+<title>Step Up Academy | Student & Academic Management</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--navy:#123a72;--blue:#1d5ca8;--gold:#e0ad35;--bg:#f3f6fb;--ink:#182538;--muted:#64748b;--line:#dce4ef;--white:#fff;--red:#b42318;--green:#16834a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans Ethiopic",Arial,sans-serif}
+header{background:linear-gradient(120deg,#102f5d,#1e5ca6);color:white;padding:18px 16px;display:flex;align-items:center;gap:12px}
+.logo{width:48px;height:48px;border:2px solid var(--gold);border-radius:12px;display:grid;place-items:center;font-weight:900;color:var(--gold);font-size:22px}
+h1{font-size:18px;margin:0}header small{opacity:.85}main{max-width:1050px;margin:20px auto;padding:0 14px}
+.card{background:white;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:15px;box-shadow:0 3px 12px #17365d0a}
+h2{font-size:18px;margin:0 0 12px;color:var(--navy)}h3{font-size:15px;margin:0 0 10px}
+p{line-height:1.55}.muted{color:var(--muted);font-size:13px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+label{display:block;font-size:13px;font-weight:650;margin:10px 0 5px}input,select{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:9px;background:white;font-size:15px;color:var(--ink)}
+button{border:0;border-radius:9px;padding:11px 15px;background:var(--blue);color:white;font-size:14px;font-weight:700;cursor:pointer;margin:7px 5px 0 0}
+button.secondary{background:#e8eef7;color:var(--navy)}button.danger{background:#fff0ee;color:var(--red)}
+button:disabled{opacity:.5}.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.row>*{flex:1}
+.status{padding:10px 12px;border-radius:9px;background:#eef4fb;color:var(--navy);font-size:13px;margin:10px 0;white-space:pre-wrap}
+.status.error{background:#fff0ee;color:var(--red)}.status.ok{background:#eaf7ef;color:var(--green)}
+nav{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}.tab{background:#e6edf7;color:var(--navy)}.tab.active{background:var(--navy);color:white}
+.hidden{display:none!important}.stats{font-size:25px;font-weight:800;color:var(--navy)}.statlabel{font-size:12px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:left}th{background:#f7f9fc;color:var(--navy)}
+.tablewrap{overflow:auto}.component-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.mpp-group{border:1px solid var(--line);border-radius:12px;padding:12px;margin:12px 0;background:#fbfcfe}.mpp-group h3{display:flex;justify-content:space-between;gap:8px;color:var(--navy)}.mpp-group small{font-weight:500;color:var(--muted)}.mpp-progress{height:8px;background:#e8eef7;border-radius:10px;overflow:hidden;margin:8px 0}.mpp-progress span{display:block;height:100%;width:0;background:var(--green)}.logo-img{width:52px;height:52px;object-fit:contain;background:white;border-radius:10px;padding:2px}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
+@media(min-width:650px){.component-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<header><img class="logo-img" src="step_up_academy_logo.jpeg" alt="Step Up Academy Logo"><div><h1>STEP UP ACADEMY</h1><small>Student & Academic Management System</small></div></header>
+<main>
+<section id="setup" class="card">
+<h2>የመጀመሪያ ግንኙነት / Connect Supabase</h2>
+<p class="muted">የSupabase Project URL እና Publishable (anon) Key አስገባ። ይህ በዚህ መሣሪያ ላይ በአሁኑ ጊዜ ብቻ ይጠቀማል። Service Role Key ፈጽሞ አታስገባ።</p>
+<label>Supabase Project URL</label><input id="projectUrl" placeholder="https://xxxxxxxx.supabase.co" autocomplete="url">
+<label>Publishable key / anon public key</label><input id="anonKey" placeholder="eyJ..." autocomplete="off">
+<button id="connectBtn">Connect</button><div id="setupMsg" class="status">የSupabase መረጃውን ከProject Settings → API ማግኘት ትችላለህ።</div>
+</section>
+<section id="login" class="card hidden">
+<h2>Admin / Staff Login</h2>
+<label>Email</label><input id="email" type="email" autocomplete="username">
+<label>Password</label><input id="password" type="password" autocomplete="current-password">
+<button id="loginBtn">Login</button><button id="disconnectBtn" class="secondary">Change project</button>
+<div id="loginMsg" class="status"></div>
+</section>
+<section id="app" class="hidden">
+<div class="card row"><div><h2 style="margin:0">Admin Dashboard</h2><span class="muted" id="who"></span></div><button id="logoutBtn" class="secondary">Logout</button></div>
+<div class="grid">
+<div class="card"><div class="stats" id="studentCount">—</div><div class="statlabel">Students</div></div>
+<div class="card"><div class="stats" id="classCount">—</div><div class="statlabel">Active classes</div></div>
+<div class="card"><div class="stats" id="subjectCount">—</div><div class="statlabel">Subjects</div></div>
+<div class="card"><div class="stats" id="teacherCount">—</div><div class="statlabel">Teachers</div></div>
+</div>
+<nav>
+<button class="tab active" data-tab="mpp">MPP Settings</button>
+<button class="tab" data-tab="students">Students</button>
+<button class="tab" data-tab="classes">Classes</button>
+<button class="tab" data-tab="subjects">Subjects</button>
+<button class="tab" data-tab="teachers">Teachers</button>
+</nav>
+<section id="panel-mpp" class="card">
+<h2>MPP ማዋቀሪያ</h2><p class="muted">በክፍል፣ በትምህርት፣ በዓመትና በሩብ ዓመት የእያንዳንዱን ክፍል Maximum Possible Points አስገባ። እሴቶቹ ከማርክ ቡክ ቅጽ ጋር መሠረት ይሆናሉ።</p>
+<div class="grid">
+<div><label>Academic Year</label><select id="yearSelect"></select></div>
+<div><label>Quarter</label><select id="quarterSelect"></select></div>
+<div><label>Class</label><select id="classSelect"></select></div>
+<div><label>Subject</label><select id="subjectSelect"></select></div>
+</div>
+<h3 style="margin-top:18px">Maximum Possible Points (MPP)</h3><p class="muted">የቅጹን 40% + 20% + 40% ክብደት ተከትሎ ነጥቦቹ በቡድን ተከፍለዋል። የት/ቤቱ ይፋዊ MPP እሴት ያልተሰጠ መስክ ባዶ ይተው።</p><div id="componentInputs"></div>
+<button id="saveMpp">Save MPP settings</button><button id="loadMpp" class="secondary">Load saved MPP</button>
+<div id="mppMsg" class="status"></div>
+</section>
+<section id="panel-students" class="card hidden"><h2>Students</h2><div class="tablewrap"><table><thead><tr><th>Admission No.</th><th>Full name</th><th>Active</th></tr></thead><tbody id="studentsBody"></tbody></table></div><p class="muted">የተማሪ ዝርዝር ከSupabase ይነበባል።</p></section>
+<section id="panel-classes" class="card hidden"><h2>Classes</h2><div class="tablewrap"><table><thead><tr><th>Grade</th><th>Section</th><th>Active</th></tr></thead><tbody id="classesBody"></tbody></table></div></section>
+<section id="panel-subjects" class="card hidden"><h2>Subjects</h2><div class="tablewrap"><table><thead><tr><th>Subject</th><th>Grade</th><th>Active</th></tr></thead><tbody id="subjectsBody"></tbody></table></div></section>
+<section id="panel-teachers" class="card hidden">
+<h2>Teacher Management / የመምህራን አስተዳደር</h2>
+<p class="muted">መምህር መመዝገቢያና የክፍል/ትምህርት ድልድል። ይህ ክፍል የመምህር መረጃን ብቻ ይመዘግባል፤ የLogin መለያ በደህንነቱ የተጠበቀ የServer አገልግሎት ከተዘጋጀ በኋላ ይገናኛል።</p>
+<section class="mpp-group"><h3>Register Teacher / መምህር መዝግብ</h3>
+<div class="grid">
+<div><label>Full name *</label><input id="teacherName" maxlength="150" placeholder="Teacher full name"></div>
+<div><label>Employee number</label><input id="teacherEmployeeNo" maxlength="50" placeholder="e.g. TCH-001"></div>
+<div><label>Phone</label><input id="teacherPhone" maxlength="30" placeholder="Phone number"></div>
+<div><label>Email</label><input id="teacherEmail" type="email" maxlength="254" placeholder="name@example.com"></div>
+</div><button id="addTeacherBtn">Register Teacher</button><div id="teacherMsg" class="status"></div></section>
+<section class="mpp-group"><h3>Teacher Assignments / የመምህር ድልድል</h3>
+<div class="grid">
+<div><label>Teacher</label><select id="assignmentTeacher"></select></div>
+<div><label>Academic Year</label><select id="assignmentYear"></select></div>
+<div><label>Class</label><select id="assignmentClass"></select></div>
+<div><label>Subject</label><select id="assignmentSubject"></select></div>
+</div><button id="addAssignmentBtn">Add Assignment</button><div id="assignmentMsg" class="status"></div></section>
+<h3>Registered Teachers</h3><div class="tablewrap"><table><thead><tr><th>Employee No.</th><th>Full name</th><th>Phone</th><th>Email</th><th>Active</th><th>Login</th></tr></thead><tbody id="teachersBody"></tbody></table></div>
+<h3 style="margin-top:20px">Current Assignments</h3><div class="tablewrap"><table><thead><tr><th>Teacher</th><th>Class</th><th>Subject</th><th>Year</th><th>Action</th></tr></thead><tbody id="assignmentsBody"></tbody></table></div>
+</section>
+</section>
+</main>
+<footer>Step Up Academy · Student & Academic Management</footer>
+<script>
+let sb=null, years=[], quarters=[], classes=[], subjects=[], components=[], teachers=[];
+const $=id=>document.getElementById(id);
+function msg(id,text,type=''){const e=$(id);e.textContent=text;e.className='status '+type}
+function opt(select,items,labelFn,idFn){select.innerHTML='';items.forEach(x=>{let o=document.createElement('option');o.value=idFn(x);o.textContent=labelFn(x);select.appendChild(o)})}
+function show(id){$(id).classList.remove('hidden')}
+function hide(id){$(id).classList.add('hidden')}
+$('connectBtn').onclick=async()=>{
+ const url=$('projectUrl').value.trim(),key=$('anonKey').value.trim();
+ if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)||!key){msg('setupMsg','ትክክለኛ Project URL እና Publishable/anon key አስገባ።','error');return}
+ try{sb=window.supabase.createClient(url,key);let {error}=await sb.auth.getSession();if(error)throw error;
+ hide('setup');show('login');msg('loginMsg','Supabase ተገናኝቷል። በAdmin መለያህ ግባ።','ok')
+ }catch(e){msg('setupMsg',e.message,'error')}
+};
+$('disconnectBtn').onclick=()=>{sb=null;hide('login');show('setup')};
+$('loginBtn').onclick=async()=>{
+ msg('loginMsg','በመግባት ላይ…');
+ const {data,error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
+ if(error){msg('loginMsg',error.message,'error');return}
+ const {data:roleData,error:roleError}=await sb.rpc('current_role');
+ const role=roleData;
+ if(roleError||role!=='admin'){await sb.auth.signOut();msg('loginMsg','ይህ መለያ Admin ፈቃድ የለውም። Role: '+(role||'unknown'),'error');return}
+ $('who').textContent=$('email').value.trim()+' · Administrator';
+ hide('login');show('app');await loadDashboard();
+};
+$('logoutBtn').onclick=async()=>{await sb.auth.signOut();hide('app');show('login');msg('loginMsg','Logged out.')}
+async function count(table){let r=await sb.from(table).select('*',{count:'exact',head:true});if(r.error)throw r.error;return r.count??0}
+async function loadDashboard(){
+ try{
+  $('studentCount').textContent=await count('students');
+  {let r=await sb.from('classes').select('*',{count:'exact',head:true}).eq('is_active',true);if(r.error)throw r.error;$('classCount').textContent=r.count??0;}
+  $('subjectCount').textContent=await count('subjects');
+  $('teacherCount').textContent=await count('teachers');
+  let [a,b,c,d,e]=await Promise.all([
+   sb.from('academic_years').select('id,year_name,is_current').order('year_name'),
+   sb.from('quarters').select('id,quarter_number,quarter_name,academic_year_id,is_open').order('quarter_number'),
+   sb.from('classes').select('id,grade_name,section,is_active').eq('is_active',true).order('grade_name').order('section'),
+   sb.from('subjects').select('id,subject_name,grade_name,is_active').eq('is_active',true).order('grade_name').order('subject_name'),
+   sb.from('assessment_components').select('id,component_code,display_order,is_active').eq('is_active',true).order('display_order')
+  ]);
+  for(let r of [a,b,c,d,e])if(r.error)throw r.error;
+  years=a.data;quarters=b.data;classes=c.data;subjects=d.data;components=e.data;
+  opt($('yearSelect'),years,x=>x.year_name+(x.is_current?' (Current)':''),x=>x.id);
+  opt($('quarterSelect'),quarters,x=>x.quarter_name,x=>x.id);
+  opt($('classSelect'),classes,x=>x.grade_name+' '+x.section,x=>x.id);
+  filterSubjects();
+  $('quarterSelect').onchange=()=>filterQuarters();
+  $('classSelect').onchange=filterSubjects;
+  drawComponents();await loadLists();await loadTeacherData();
+ }catch(e){alert('Dashboard data error: '+e.message)}
+}
+function filterQuarters(){let y=$('yearSelect').value;let list=quarters.filter(q=>q.academic_year_id===y);opt($('quarterSelect'),list,x=>x.quarter_name,x=>x.id)}
+function filterSubjects(){let cl=classes.find(x=>x.id===$('classSelect').value);let list=cl?subjects.filter(s=>s.grade_name===cl.grade_name):[];opt($('subjectSelect'),list,x=>x.subject_name,x=>x.id)}
+function drawComponents(){
+ const groups=[
+  {title:'DA + Quiz',weight:'40%',codes:/^(DA[1-6]|Q[1-5])$/},
+  {title:'Worksheet + Test',weight:'20%',codes:/^(W[1-2]|T[1-2])$/},
+  {title:'Final Exam',weight:'40%',codes:/^FE$/}
+ ];
+ $('componentInputs').innerHTML='';
+ groups.forEach(g=>{
+  const items=components.filter(c=>g.codes.test(c.component_code));
+  if(!items.length)return;
+  const box=document.createElement('section');box.className='mpp-group';
+  const heading=document.createElement('h3');heading.innerHTML='<span>'+g.title+'</span><small>Weight: '+g.weight+'</small>';box.append(heading);
+  const grid=document.createElement('div');grid.className='component-grid';
+  items.forEach(c=>{let d=document.createElement('div');let l=document.createElement('label');l.textContent=c.component_code;let i=document.createElement('input');i.type='number';i.min='0.01';i.step='0.01';i.inputMode='decimal';i.placeholder='Enter MPP';i.dataset.id=c.id;d.append(l,i);grid.append(d)});
+  box.append(grid);$('componentInputs').append(box);
+ });
+ if(!components.length)$('componentInputs').textContent='No active assessment components found.';
+}
+$('yearSelect').onchange=()=>filterQuarters();
+$('loadMpp').onclick=loadMpp;
+async function loadMpp(){
+ let keys={academic_year_id:$('yearSelect').value,quarter_id:$('quarterSelect').value,class_id:$('classSelect').value,subject_id:$('subjectSelect').value};
+ if(Object.values(keys).some(v=>!v)){msg('mppMsg','አራቱንም ምርጫዎች አድርግ።','error');return}
+ let {data,error}=await sb.from('assessment_component_settings').select('component_id,max_points').match(keys);
+ if(error){msg('mppMsg',error.message,'error');return}
+ document.querySelectorAll('#componentInputs input').forEach(i=>{let found=data.find(x=>x.component_id===i.dataset.id);i.value=found?found.max_points:''});
+ msg('mppMsg',data.length+' saved MPP values loaded.','ok');
+}
+$('saveMpp').onclick=async()=>{
+ let keys={academic_year_id:$('yearSelect').value,quarter_id:$('quarterSelect').value,class_id:$('classSelect').value,subject_id:$('subjectSelect').value};
+ if(Object.values(keys).some(v=>!v)){msg('mppMsg','ዓመት፣ ሩብ ዓመት፣ ክፍልና ትምህርት ምረጥ።','error');return}
+ let inputs=[...document.querySelectorAll('#componentInputs input')],rows=[];
+ for(let i of inputs){if(i.value.trim()==='')continue;let n=Number(i.value);if(!Number.isFinite(n)||n<=0){msg('mppMsg','MPP ከዜሮ በላይ መሆን አለበት።','error');return}rows.push({...keys,component_id:i.dataset.id,max_points:n})}
+ if(!rows.length){msg('mppMsg','ቢያንስ አንድ MPP አስገባ።','error');return}
+ let {error}=await sb.from('assessment_component_settings').upsert(rows,{onConflict:'academic_year_id,quarter_id,class_id,subject_id,component_id'});
+ if(error){msg('mppMsg',error.message,'error');return}
+ msg('MPP settings saved: '+rows.length+' components.','ok');
+};
+async function loadLists(){
+ let [s,c,u]=await Promise.all([
+ sb.from('students').select('admission_number,full_name,is_active').order('admission_number').limit(500),
+ sb.from('classes').select('grade_name,section,is_active').order('grade_name').order('section'),
+ sb.from('subjects').select('subject_name,grade_name,is_active').order('grade_name').order('subject_name')
+ ]);
+ if(s.error||c.error||u.error)throw (s.error||c.error||u.error);
+ $('studentsBody').innerHTML=s.data.map(x=>`<tr><td>${esc(x.admission_number)}</td><td>${esc(x.full_name)}</td><td>${x.is_active?'Yes':'No'}</td></tr>`).join('');
+ $('classesBody').innerHTML=c.data.map(x=>`<tr><td>${esc(x.grade_name)}</td><td>${esc(x.section)}</td><td>${x.is_active?'Yes':'No'}</td></tr>`).join('');
+ $('subjectsBody').innerHTML=u.data.map(x=>`<tr><td>${esc(x.subject_name)}</td><td>${esc(x.grade_name)}</td><td>${x.is_active?'Yes':'No'}</td></tr>`).join('');
+}
+async function loadTeacherData(){
+ const [tr,ar]=await Promise.all([
+  sb.from('teachers').select('id,profile_id,employee_number,full_name,phone,email,is_active').order('full_name').limit(1000),
+  sb.from('teacher_assignments').select('id,teacher_id,class_id,subject_id,academic_year_id').limit(2000)
+ ]);
+ if(tr.error||ar.error)throw (tr.error||ar.error);
+ teachers=tr.data||[];
+ opt($('assignmentTeacher'),teachers.filter(t=>t.is_active),t=>t.full_name+(t.employee_number?' · '+t.employee_number:''),t=>t.id);
+ opt($('assignmentYear'),years,y=>y.year_name,y=>y.id);
+ opt($('assignmentClass'),classes,c=>c.grade_name+' '+c.section,c=>c.id);
+ filterAssignmentSubjects();
+ $('assignmentClass').onchange=filterAssignmentSubjects;
+ $('teachersBody').innerHTML=teachers.map(t=>`<tr><td>${esc(t.employee_number||'—')}</td><td>${esc(t.full_name)}</td><td>${esc(t.phone||'—')}</td><td>${esc(t.email||'—')}</td><td>${t.is_active?'Yes':'No'}</td><td>${t.profile_id?'Linked':'Not linked'}</td></tr>`).join('')||'<tr><td colspan="6">No teachers registered.</td></tr>';
+ $('assignmentsBody').innerHTML=(ar.data||[]).map(a=>{
+  const t=teachers.find(x=>x.id===a.teacher_id),c=classes.find(x=>x.id===a.class_id),u=subjects.find(x=>x.id===a.subject_id),y=years.find(x=>x.id===a.academic_year_id);
+  return `<tr><td>${esc(t?.full_name||'Unknown')}</td><td>${esc((c?.grade_name||'')+' '+(c?.section||''))}</td><td>${esc(u?.subject_name||'Unknown')}</td><td>${esc(y?.year_name||'Unknown')}</td><td><button class="danger" data-delete-assignment="${esc(a.id)}">Remove</button></td></tr>`;
+ }).join('')||'<tr><td colspan="5">No assignments registered.</td></tr>';
+ document.querySelectorAll('[data-delete-assignment]').forEach(b=>b.onclick=()=>deleteAssignment(b.dataset.deleteAssignment));
+ $('teacherCount').textContent=teachers.length;
+}
+function filterAssignmentSubjects(){
+ const cl=classes.find(x=>x.id===$('assignmentClass').value);
+ const list=cl?subjects.filter(x=>x.grade_name===cl.grade_name):[];
+ opt($('assignmentSubject'),list,x=>x.subject_name,x=>x.id);
+}
+$('addTeacherBtn').onclick=async()=>{
+ const full_name=$('teacherName').value.trim(),employee_number=$('teacherEmployeeNo').value.trim()||null,phone=$('teacherPhone').value.trim()||null,email=$('teacherEmail').value.trim()||null;
+ if(!full_name){msg('teacherMsg','የመምህሩን ሙሉ ስም አስገባ።','error');return}
+ if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){msg('teacherMsg','ትክክለኛ Email አስገባ።','error');return}
+ const {error}=await sb.from('teachers').insert({full_name,employee_number,phone,email,is_active:true});
+ if(error){msg('teacherMsg',error.message,'error');return}
+ $('teacherName').value=$('teacherEmployeeNo').value=$('teacherPhone').value=$('teacherEmail').value='';
+ msg('teacherMsg','መምህሩ ተመዝግቧል።','ok');await loadTeacherData();
+};
+$('addAssignmentBtn').onclick=async()=>{
+ const row={teacher_id:$('assignmentTeacher').value,class_id:$('assignmentClass').value,subject_id:$('assignmentSubject').value,academic_year_id:$('assignmentYear').value};
+ if(Object.values(row).some(v=>!v)){msg('assignmentMsg','መምህር፣ ዓመት፣ ክፍልና ትምህርት ምረጥ።','error');return}
+ const {error}=await sb.from('teacher_assignments').insert(row);
+ if(error){msg('assignmentMsg',error.message,'error');return}
+ msg('assignmentMsg','ድልድሉ ተመዝግቧል።','ok');await loadTeacherData();
+};
+async function deleteAssignment(id){
+ if(!confirm('ይህን የመምህር ድልድል ማስወገድ ትፈልጋለህ?'))return;
+ const {error}=await sb.from('teacher_assignments').delete().eq('id',id);
+ if(error){msg('assignmentMsg',error.message,'error');return}
+ msg('assignmentMsg','ድልድሉ ተወግዷል።','ok');await loadTeacherData();
+}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+ ['mpp','students','classes','subjects','teachers'].forEach(t=>hide('panel-'+t));show('panel-'+b.dataset.tab)
+});
+</script>
+</body></html>
