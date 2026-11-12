@@ -1,0 +1,776 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#123b72">
+  <title>Teacher Portal | Step Up Academy</title>
+
+  <style>
+    :root {
+      --blue: #123b72;
+      --blue2: #1d5da8;
+      --gold: #e9b949;
+      --light: #f3f6fb;
+      --text: #1d2939;
+      --muted: #667085;
+      --white: #ffffff;
+      --border: #dce3ed;
+      --danger: #c62828;
+      --success: #16834a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--light);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    .topbar {
+      background: var(--blue);
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 3px 12px #0002;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      background: white;
+      color: var(--blue);
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: 20px;
+      border: 2px solid var(--gold);
+    }
+
+    .brand h1 {
+      font-size: 17px;
+      margin: 0 0 4px;
+    }
+
+    .brand p {
+      font-size: 11px;
+      margin: 0;
+      opacity: .85;
+    }
+
+    .language {
+      background: #ffffff18;
+      color: white;
+      border: 1px solid #ffffff66;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .main {
+      width: 100%;
+      max-width: 1050px;
+      margin: 35px auto;
+      padding: 15px;
+    }
+
+    .login-card {
+      background: white;
+      max-width: 440px;
+      margin: 25px auto;
+      padding: 30px 25px;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px #17365d12;
+      border: 1px solid var(--border);
+    }
+
+    .card-heading {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .card-heading h2 {
+      color: var(--blue);
+      margin: 0 0 8px;
+      font-size: 23px;
+    }
+
+    .card-heading p {
+      color: var(--muted);
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .field {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+      background: white;
+    }
+
+    input:focus {
+      border-color: var(--blue2);
+      box-shadow: 0 0 0 3px #1d5da81a;
+    }
+
+    .password-wrap {
+      position: relative;
+    }
+
+    .password-wrap input {
+      padding-right: 65px;
+    }
+
+    .show-password {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 0;
+      background: transparent;
+      color: var(--blue2);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .primary-btn {
+      width: 100%;
+      padding: 14px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--blue);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+
+    .primary-btn:hover {
+      background: var(--blue2);
+    }
+
+    .primary-btn:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .message {
+      display: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin: 15px 0;
+      line-height: 1.5;
+    }
+
+    .message.error {
+      display: block;
+      color: var(--danger);
+      background: #fff0f0;
+    }
+
+    .message.success {
+      display: block;
+      color: var(--success);
+      background: #eaf8ef;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .notice {
+      background: #fff8e7;
+      border-left: 4px solid var(--gold);
+      padding: 13px;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .dashboard-header {
+      background: var(--blue);
+      color: white;
+      padding: 25px;
+      border-radius: 14px;
+      margin-bottom: 20px;
+    }
+
+    .dashboard-header h2 {
+      margin: 0 0 8px;
+    }
+
+    .dashboard-header p {
+      margin: 0;
+      opacity: .9;
+    }
+
+    .section-card {
+      background: white;
+      padding: 22px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 18px;
+    }
+
+    .section-card h3 {
+      color: var(--blue);
+      margin-top: 0;
+    }
+
+    .class-item {
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      background: #fbfcff;
+    }
+
+    .class-item strong {
+      color: var(--blue);
+    }
+
+    .logout-btn {
+      background: #fff;
+      color: var(--danger);
+      border: 1px solid #e5bcbc;
+      border-radius: 8px;
+      padding: 9px 15px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    [dir="rtl"] {
+      text-align: right;
+    }
+
+    @media (max-width: 500px) {
+      .topbar {
+        padding: 12px;
+      }
+
+      .brand h1 {
+        font-size: 14px;
+      }
+
+      .brand p {
+        font-size: 10px;
+      }
+
+      .main {
+        margin: 15px auto;
+      }
+
+      .login-card {
+        padding: 24px 18px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">SA</div>
+      <div>
+        <h1>STEP UP ACADEMY</h1>
+        <p id="schoolSubtitle">Teacher & Academic Portal</p>
+      </div>
+    </div>
+
+    <button class="language" id="languageBtn" onclick="toggleLanguage()">
+      አማርኛ
+    </button>
+  </header>
+
+  <main class="main">
+
+    <!-- LOGIN PAGE -->
+    <section class="login-card" id="loginPage">
+
+      <div class="card-heading">
+        <h2 id="loginTitle">Teacher Login</h2>
+        <p id="loginSubtitle">Sign in to your teacher account</p>
+      </div>
+
+      <div id="loginMessage" class="message"></div>
+
+      <form id="loginForm">
+
+        <div class="field">
+          <label id="usernameLabel" for="username">Username</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            placeholder="Enter your username"
+            autocomplete="username"
+            required
+          >
+        </div>
+
+        <div class="field">
+          <label id="passwordLabel" for="password">Password</label>
+          <div class="password-wrap">
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              required
+            >
+            <button
+              type="button"
+              class="show-password"
+              onclick="togglePassword('password', this)"
+              id="showPasswordBtn"
+            >Show</button>
+          </div>
+        </div>
+
+        <button class="primary-btn" type="submit" id="loginBtn">
+          Login
+        </button>
+
+      </form>
+    </section>
+
+    <!-- CHANGE PASSWORD PAGE -->
+    <section class="login-card hidden" id="changePasswordPage">
+
+      <div class="card-heading">
+        <h2 id="changeTitle">Change Your Password</h2>
+        <p id="changeSubtitle">
+          You must change your temporary password before continuing.
+        </p>
+      </div>
+
+      <div class="notice" id="changeNotice">
+        For your account security, create a new password that only you know.
+      </div>
+
+      <div id="changeMessage" class="message"></div>
+
+      <form id="changePasswordForm">
+
+        <div class="field">
+          <label id="newPasswordLabel" for="newPassword">
+            New Password
+          </label>
+          <input
+            type="password"
+            id="newPassword"
+            autocomplete="new-password"
+            minlength="8"
+            required
+          >
+        </div>
+
+        <div class="field">
+          <label id="confirmPasswordLabel" for="confirmPassword">
+            Confirm New Password
+          </label>
+          <input
+            type="password"
+            id="confirmPassword"
+            autocomplete="new-password"
+            minlength="8"
+            required
+          >
+        </div>
+
+        <button class="primary-btn" type="submit" id="changeBtn">
+          Save New Password
+        </button>
+
+      </form>
+    </section>
+
+    <!-- TEACHER DASHBOARD -->
+    <section class="hidden" id="dashboardPage">
+
+      <div class="dashboard-header">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+          <div>
+            <h2 id="welcomeTitle">Welcome, Teacher</h2>
+            <p id="teacherInfo">Your assigned classes and subjects</p>
+          </div>
+          <button class="logout-btn" onclick="logout()" id="logoutBtn">
+            Logout
+          </button>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <h3 id="classesTitle">My Assigned Classes</h3>
+        <div id="classesList">
+          <p>Loading your assigned classes...</p>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer>
+    © <span id="year"></span> Step Up Academy.
+    <span id="footerText">All rights reserved.</span>
+  </footer>
+
+  <script>
+    const API = "/.netlify/functions";
+
+    let currentLanguage = "en";
+    let accessToken = null;
+    let teacherName = "";
+
+    const translations = {
+      en: {
+        subtitle: "Teacher & Academic Portal",
+        login: "Teacher Login",
+        loginSubtitle: "Sign in to your teacher account",
+        username: "Username",
+        password: "Password",
+        usernamePlaceholder: "Enter your username",
+        passwordPlaceholder: "Enter your password",
+        loginBtn: "Login",
+        show: "Show",
+        hide: "Hide",
+        changeTitle: "Change Your Password",
+        changeSubtitle: "You must change your temporary password before continuing.",
+        changeNotice: "For your account security, create a new password that only you know.",
+        newPassword: "New Password",
+        confirmPassword: "Confirm New Password",
+        savePassword: "Save New Password",
+        welcome: "Welcome",
+        teacherInfo: "Your assigned classes and subjects",
+        classes: "My Assigned Classes",
+        logout: "Logout",
+        footer: "All rights reserved.",
+        loading: "Loading your assigned classes...",
+        noClasses: "No assigned classes were found.",
+        class: "Class",
+        subject: "Subject",
+        loginError: "Login failed. Please check your username and password.",
+        passwordMismatch: "The passwords do not match.",
+        passwordLength: "Password must contain at least 8 characters.",
+        passwordSuccess: "Password changed successfully.",
+        changeError: "Could not change password. Please try again.",
+        networkError: "Connection error. Please try again.",
+        setupPending: "The login service is not connected yet. Backend setup is still required."
+      },
+      am: {
+        subtitle: "የመምህራንና የትምህርት አስተዳደር ፖርታል",
+        login: "የመምህራን መግቢያ",
+        loginSubtitle: "ወደ መምህር መለያዎ ይግቡ",
+        username: "የተጠቃሚ ስም",
+        password: "የይለፍ ቃል",
+        usernamePlaceholder: "የተጠቃሚ ስም ያስገቡ",
+        passwordPlaceholder: "የይለፍ ቃል ያስገቡ",
+        loginBtn: "ግባ",
+        show: "አሳይ",
+        hide: "ደብቅ",
+        changeTitle: "የይለፍ ቃል ይቀይሩ",
+        changeSubtitle: "ከመቀጠልዎ በፊት ጊዜያዊ የይለፍ ቃልዎን መቀየር አለብዎት።",
+        changeNotice: "ለመለያዎ ደህንነት እርስዎ ብቻ የሚያውቁትን አዲስ የይለፍ ቃል ይፍጠሩ።",
+        newPassword: "አዲስ የይለፍ ቃል",
+        confirmPassword: "አዲሱን የይለፍ ቃል ያረጋግጡ",
+        savePassword: "አዲሱን የይለፍ ቃል አስቀምጥ",
+        welcome: "እንኳን ደህና መጡ",
+        teacherInfo: "የተመደቡልዎ ክፍሎችና ትምህርቶች",
+        classes: "የተመደቡልኝ ክፍሎች",
+        logout: "ውጣ",
+        footer: "መብቱ በሕግ የተጠበቀ ነው።",
+        loading: "የተመደቡልዎን ክፍሎች በማምጣት ላይ...",
+        noClasses: "የተመደበ ክፍል አልተገኘም።",
+        class: "ክፍል",
+        subject: "ትምህርት",
+        loginError: "መግባት አልተቻለም። የተጠቃሚ ስምና የይለፍ ቃል ያረጋግጡ።",
+        passwordMismatch: "የይለፍ ቃሎቹ አይመሳሰሉም።",
+        passwordLength: "የይለፍ ቃሉ ቢያንስ 8 ፊደላት መያዝ አለበት።",
+        passwordSuccess: "የይለፍ ቃሉ ተቀይሯል።",
+        changeError: "የይለፍ ቃሉን መቀየር አልተቻለም።",
+        networkError: "የግንኙነት ችግር አለ። እንደገና ይሞክሩ።",
+        setupPending: "የመግቢያ አገልግሎቱ ገና ከBackend ጋር አልተገናኘም።"
+      }
+    };
+
+    function t(key) {
+      return translations[currentLanguage][key] || key;
+    }
+
+    function toggleLanguage() {
+      currentLanguage = currentLanguage === "en" ? "am" : "en";
+      document.documentElement.lang = currentLanguage;
+      document.documentElement.dir = "ltr";
+
+      const button = document.getElementById("languageBtn");
+      button.textContent = currentLanguage === "en" ? "አማርኛ" : "English";
+
+      const map = {
+        schoolSubtitle: "subtitle",
+        loginTitle: "login",
+        loginSubtitle: "loginSubtitle",
+        usernameLabel: "username",
+        passwordLabel: "password",
+        loginBtn: "loginBtn",
+        changeTitle: "changeTitle",
+        changeSubtitle: "changeSubtitle",
+        changeNotice: "changeNotice",
+        newPasswordLabel: "newPassword",
+        confirmPasswordLabel: "confirmPassword",
+        changeBtn: "savePassword",
+        teacherInfo: "teacherInfo",
+        classesTitle: "classes",
+        logoutBtn: "logout",
+        footerText: "footer"
+      };
+
+      Object.keys(map).forEach(id => {
+        document.getElementById(id).textContent = t(map[id]);
+      });
+
+      document.getElementById("username").placeholder = t("usernamePlaceholder");
+      document.getElementById("password").placeholder = t("passwordPlaceholder");
+    }
+
+    function showMessage(id, message, type) {
+      const box = document.getElementById(id);
+      box.textContent = message;
+      box.className = "message " + type;
+    }
+
+    function clearMessage(id) {
+      const box = document.getElementById(id);
+      box.textContent = "";
+      box.className = "message";
+    }
+
+    function showPage(pageId) {
+      ["loginPage", "changePasswordPage", "dashboardPage"].forEach(id => {
+        document.getElementById(id).classList.add("hidden");
+      });
+
+      document.getElementById(pageId).classList.remove("hidden");
+    }
+
+    function togglePassword(id, button) {
+      const input = document.getElementById(id);
+      const visible = input.type === "password";
+
+      input.type = visible ? "text" : "password";
+      button.textContent = visible ? t("hide") : t("show");
+    }
+
+    async function login(username, password) {
+      const response = await fetch(`${API}/teacher-login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || t("loginError"));
+      }
+
+      return data;
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      clearMessage("loginMessage");
+
+      const button = document.getElementById("loginBtn");
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+
+      button.disabled = true;
+      button.textContent = "...";
+
+      try {
+        const data = await login(username, password);
+
+        accessToken = data.access_token;
+        teacherName = data.full_name || data.teacher_name || username;
+
+        if (!accessToken) {
+          throw new Error(t("setupPending"));
+        }
+
+        if (data.must_change_password === true) {
+          showPage("changePasswordPage");
+        } else {
+          showPage("dashboardPage");
+          await loadDashboard();
+        }
+
+      } catch (error) {
+        showMessage("loginMessage", error.message || t("networkError"), "error");
+      } finally {
+        button.disabled = false;
+        button.textContent = t("loginBtn");
+      }
+    });
+
+    document.getElementById("changePasswordForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      clearMessage("changeMessage");
+
+      const newPassword = document.getElementById("newPassword").value;
+      const confirmPassword = document.getElementById("confirmPassword").value;
+
+      if (newPassword.length < 8) {
+        showMessage("changeMessage", t("passwordLength"), "error");
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        showMessage("changeMessage", t("passwordMismatch"), "error");
+        return;
+      }
+
+      const button = document.getElementById("changeBtn");
+      button.disabled = true;
+
+      try {
+        const response = await fetch(`${API}/change-teacher-password`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({ new_password: newPassword })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.error || t("changeError"));
+        }
+
+        showMessage("changeMessage", t("passwordSuccess"), "success");
+
+        document.getElementById("newPassword").value = "";
+        document.getElementById("confirmPassword").value = "";
+
+        showPage("dashboardPage");
+        await loadDashboard();
+
+      } catch (error) {
+        showMessage("changeMessage", error.message || t("networkError"), "error");
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    async function loadDashboard() {
+      document.getElementById("welcomeTitle").textContent =
+        `${t("welcome")}, ${teacherName}`;
+
+      const list = document.getElementById("classesList");
+      list.textContent = t("loading");
+
+      try {
+        const response = await fetch(`${API}/teacher-dashboard`, {
+          headers: {
+            "Authorization": `Bearer ${accessToken}`
+          }
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.error || t("networkError"));
+        }
+
+        list.replaceChildren();
+
+        const assignments = data.assignments || [];
+
+        if (assignments.length === 0) {
+          list.textContent = t("noClasses");
+          return;
+        }
+
+        assignments.forEach(item => {
+          const card = document.createElement("div");
+          card.className = "class-item";
+
+          const className = document.createElement("strong");
+          className.textContent = `${t("class")}: ${item.class_name || item.class || "-"}`;
+
+          const subject = document.createElement("p");
+          subject.textContent = `${t("subject")}: ${item.subject_name || item.subject || "-"}`;
+
+          card.append(className, subject);
+          list.appendChild(card);
+        });
+
+      } catch (error) {
+        list.textContent = error.message || t("networkError");
+      }
+    }
+
+    function logout() {
+      accessToken = null;
+      teacherName = "";
+      document.getElementById("loginForm").reset();
+      document.getElementById("changePasswordForm").reset();
+      clearMessage("loginMessage");
+      clearMessage("changeMessage");
+      showPage("loginPage");
+    }
+
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+
+</body>
+</html>
