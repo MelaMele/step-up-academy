@@ -6,6 +6,7 @@ function getHeaders(origin = "") {
     "Access-Control-Allow-Headers": "authorization, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Content-Type": "application/json",
+    "Cache-Control": "no-store",
     "Vary": "Origin"
   };
 
@@ -34,15 +35,21 @@ async function readResponse(response) {
   }
 }
 
-export default async (request) => {
-  const origin = request.headers?.origin || "";
+export const handler = async (event) => {
+  const origin =
+    event.headers?.origin ||
+    event.headers?.Origin ||
+    "";
+
   const headers = getHeaders(origin);
 
   if (allowedOrigin && origin && origin !== allowedOrigin) {
-    return reply(403, { error: "Origin not allowed." }, headers);
+    return reply(403, {
+      error: "Origin not allowed."
+    }, headers);
   }
 
-  if (request.httpMethod === "OPTIONS") {
+  if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 204,
       headers,
@@ -50,8 +57,10 @@ export default async (request) => {
     };
   }
 
-  if (request.httpMethod !== "POST") {
-    return reply(405, { error: "Method not allowed." }, headers);
+  if (event.httpMethod !== "POST") {
+    return reply(405, {
+      error: "Method not allowed."
+    }, headers);
   }
 
   const projectUrl = (
@@ -68,14 +77,16 @@ export default async (request) => {
   }
 
   const authHeader =
-    request.headers?.authorization ||
-    request.headers?.Authorization ||
+    event.headers?.authorization ||
+    event.headers?.Authorization ||
     "";
 
   const tokenMatch = authHeader.match(/^Bearer\s+(.+)$/i);
 
   if (!tokenMatch) {
-    return reply(401, { error: "Authentication required." }, headers);
+    return reply(401, {
+      error: "Authentication required."
+    }, headers);
   }
 
   const accessToken = tokenMatch[1].trim();
@@ -83,9 +94,11 @@ export default async (request) => {
   let input;
 
   try {
-    input = JSON.parse(request.body || "{}");
+    input = JSON.parse(event.body || "{}");
   } catch {
-    return reply(400, { error: "Invalid request." }, headers);
+    return reply(400, {
+      error: "Invalid request."
+    }, headers);
   }
 
   const newPassword = String(input.new_password || "");
@@ -97,14 +110,17 @@ export default async (request) => {
   }
 
   try {
-    // 1. Verify the signed-in user with Supabase Auth.
-    const userResponse = await fetch(`${projectUrl}/auth/v1/user`, {
-      method: "GET",
-      headers: {
-        apikey: anonKey,
-        Authorization: `Bearer ${accessToken}`
+    // 1. Verify the authenticated user.
+    const userResponse = await fetch(
+      `${projectUrl}/auth/v1/user`,
+      {
+        method: "GET",
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${accessToken}`
+        }
       }
-    });
+    );
 
     const authUser = await readResponse(userResponse);
 
@@ -114,11 +130,16 @@ export default async (request) => {
       }, headers);
     }
 
-    // 2. Confirm that this account belongs to an active teacher.
-    const profileUrl =
-      `${projectUrl}/rest/v1/profiles` +
-      `?id=eq.${encodeURIComponent(authUser.id)}` +
-      `&select=id,role,is_active,must_change_password`;
+    // 2. Verify active teacher profile.
+    const profileUrl = new URL(
+      `${projectUrl}/rest/v1/profiles`
+    );
+
+    profileUrl.searchParams.set("id", `eq.${authUser.id}`);
+    profileUrl.searchParams.set(
+      "select",
+      "id,role,is_active,must_change_password"
+    );
 
     const profileResponse = await fetch(profileUrl, {
       method: "GET",
@@ -133,6 +154,7 @@ export default async (request) => {
     }
 
     const profiles = await readResponse(profileResponse);
+
     const profile =
       Array.isArray(profiles) && profiles.length === 1
         ? profiles[0]
@@ -148,7 +170,7 @@ export default async (request) => {
       }, headers);
     }
 
-    // 3. Change the authenticated user's password.
+    // 3. Update the password using the Auth Admin API.
     const passwordResponse = await fetch(
       `${projectUrl}/auth/v1/admin/users/${encodeURIComponent(authUser.id)}`,
       {
@@ -170,9 +192,28 @@ export default async (request) => {
       }, headers);
     }
 
-    // 4. Mark the temporary-password requirement as completed.
+    // 4. Mark first-login password change as completed.
+    const updateProfileUrl = new URL(
+      `${projectUrl}/rest/v1/profiles`
+    );
+
+    updateProfileUrl.searchParams.set(
+      "id",
+      `eq.${authUser.id}`
+    );
+
+    updateProfileUrl.searchParams.set(
+      "role",
+      "eq.teacher"
+    );
+
+    updateProfileUrl.searchParams.set(
+      "is_active",
+      "eq.true"
+    );
+
     const updateProfileResponse = await fetch(
-      `${projectUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(authUser.id)}&role=eq.teacher`,
+      updateProfileUrl,
       {
         method: "PATCH",
         headers: {
@@ -187,7 +228,8 @@ export default async (request) => {
       }
     );
 
-    const updatedProfiles = await readResponse(updateProfileResponse);
+    const updatedProfiles =
+      await readResponse(updateProfileResponse);
 
     if (
       !updateProfileResponse.ok ||
@@ -206,6 +248,8 @@ export default async (request) => {
     }, headers);
 
   } catch (error) {
+    console.error("Teacher password change error:", error);
+
     return reply(500, {
       error: "Unable to change password right now. Please try again later."
     }, headers);
