@@ -52,19 +52,19 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      min-width: 0;
     }
 
     .logo {
       width: 48px;
       height: 48px;
+      min-width: 48px;
       border-radius: 10px;
       background: white;
-      color: var(--blue);
-      display: grid;
-      place-items: center;
-      font-weight: 900;
-      font-size: 20px;
+      object-fit: contain;
+      padding: 2px;
       border: 2px solid var(--gold);
+      display: block;
     }
 
     .brand h1 {
@@ -85,6 +85,7 @@
       padding: 8px 12px;
       border-radius: 8px;
       cursor: pointer;
+      flex-shrink: 0;
     }
 
     .main {
@@ -314,7 +315,11 @@
 
   <header class="topbar">
     <div class="brand">
-      <div class="logo">SA</div>
+      <img
+        class="logo"
+        src="./step_up_academy_logo%20(1).jpeg"
+        alt="Step Up Academy Logo"
+      >
       <div>
         <h1>STEP UP ACADEMY</h1>
         <p id="schoolSubtitle">Teacher & Academic Portal</p>
