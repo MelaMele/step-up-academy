@@ -6,6 +6,7 @@ function getHeaders(origin = "") {
     "Access-Control-Allow-Headers": "authorization, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Content-Type": "application/json",
+    "Cache-Control": "no-store",
     "Vary": "Origin"
   };
 
@@ -34,15 +35,21 @@ async function readResponse(response) {
   }
 }
 
-export default async (request) => {
-  const origin = request.headers?.origin || "";
+export const handler = async (event) => {
+  const origin =
+    event.headers?.origin ||
+    event.headers?.Origin ||
+    "";
+
   const headers = getHeaders(origin);
 
   if (allowedOrigin && origin && origin !== allowedOrigin) {
-    return reply(403, { error: "Origin not allowed." }, headers);
+    return reply(403, {
+      error: "Origin not allowed."
+    }, headers);
   }
 
-  if (request.httpMethod === "OPTIONS") {
+  if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 204,
       headers,
@@ -50,8 +57,10 @@ export default async (request) => {
     };
   }
 
-  if (request.httpMethod !== "POST") {
-    return reply(405, { error: "Method not allowed." }, headers);
+  if (event.httpMethod !== "POST") {
+    return reply(405, {
+      error: "Method not allowed."
+    }, headers);
   }
 
   const projectUrl = (
@@ -70,9 +79,11 @@ export default async (request) => {
   let input;
 
   try {
-    input = JSON.parse(request.body || "{}");
+    input = JSON.parse(event.body || "{}");
   } catch {
-    return reply(400, { error: "Invalid request." }, headers);
+    return reply(400, {
+      error: "Invalid request."
+    }, headers);
   }
 
   const username = String(input.username || "").trim().toLowerCase();
@@ -89,11 +100,17 @@ export default async (request) => {
   }
 
   try {
-    // 1. Find the username in the server-side profiles table.
-    const profileUrl =
-      `${projectUrl}/rest/v1/profiles` +
-      `?username=ilike.${encodeURIComponent(username)}` +
-      `&select=id,full_name,username,role,is_active,must_change_password`;
+    // 1. Find teacher profile by username
+    const profileUrl = new URL(
+      `${projectUrl}/rest/v1/profiles`
+    );
+
+    profileUrl.searchParams.set("username", `ilike.${username}`);
+    profileUrl.searchParams.set(
+      "select",
+      "id,full_name,username,role,is_active,must_change_password"
+    );
+    profileUrl.searchParams.set("limit", "1");
 
     const profileResponse = await fetch(profileUrl, {
       method: "GET",
@@ -108,11 +125,10 @@ export default async (request) => {
     }
 
     const profiles = await readResponse(profileResponse);
-    const profile = Array.isArray(profiles) && profiles.length === 1
+    const profile = Array.isArray(profiles)
       ? profiles[0]
       : null;
 
-    // Use the same generic message for unknown and inactive accounts.
     if (
       !profile ||
       profile.role !== "teacher" ||
@@ -123,7 +139,7 @@ export default async (request) => {
       }, headers);
     }
 
-    // 2. Sign in using the synthetic email created for this username.
+    // 2. Authenticate through Supabase Auth
     const authEmail = `${profile.username}@stepupacademy.test`;
 
     const signInResponse = await fetch(
@@ -154,7 +170,7 @@ export default async (request) => {
       }, headers);
     }
 
-    // 3. Return only the authenticated teacher's session information.
+    // 3. Return authenticated session
     return reply(200, {
       success: true,
       access_token: authData.access_token,
@@ -162,11 +178,13 @@ export default async (request) => {
       expires_in: authData.expires_in,
       full_name: profile.full_name || "Teacher",
       username: profile.username,
-      must_change_password: profile.must_change_password === true
+      must_change_password:
+        profile.must_change_password === true
     }, headers);
 
   } catch (error) {
-    // Do not expose database or authentication internals to the browser.
+    console.error("Teacher login error:", error);
+
     return reply(500, {
       error: "Unable to sign in right now. Please try again later."
     }, headers);
