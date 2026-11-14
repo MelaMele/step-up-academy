@@ -3,11 +3,12 @@ import { randomUUID } from "node:crypto";
 
 const allowedOrigin = process.env.TEACHER_PORTAL_ORIGIN || "";
 
-const getHeaders = (origin = "") => {
+function getHeaders(origin = "") {
   const headers = {
     "Access-Control-Allow-Headers": "authorization, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Content-Type": "application/json",
+    "Cache-Control": "no-store",
     "Vary": "Origin"
   };
 
@@ -16,13 +17,15 @@ const getHeaders = (origin = "") => {
   }
 
   return headers;
-};
+}
 
-const reply = (statusCode, body, headers) => ({
-  statusCode,
-  headers,
-  body: JSON.stringify(body)
-});
+function reply(statusCode, body, headers) {
+  return {
+    statusCode,
+    headers,
+    body: JSON.stringify(body)
+  };
+}
 
 function makeBaseUsername(name) {
   const value = String(name || "")
@@ -34,6 +37,16 @@ function makeBaseUsername(name) {
     .slice(0, 28);
 
   return value || "teacher";
+}
+
+async function readResponse(response) {
+  const text = await response.text();
+
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    return null;
+  }
 }
 
 async function supabaseRequest(
@@ -59,14 +72,7 @@ async function supabaseRequest(
     ...(body ? { body: JSON.stringify(body) } : {})
   });
 
-  const text = await response.text();
-  let data;
-
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = { message: text };
-  }
+  const data = await readResponse(response);
 
   if (!response.ok) {
     const error = new Error(
@@ -75,6 +81,7 @@ async function supabaseRequest(
       data?.error_description ||
       `Supabase request failed (${response.status})`
     );
+
     error.status = response.status;
     throw error;
   }
@@ -82,15 +89,21 @@ async function supabaseRequest(
   return data;
 }
 
-export default async (request) => {
-  const origin = request.headers?.origin || "";
+export const handler = async (event) => {
+  const origin =
+    event.headers?.origin ||
+    event.headers?.Origin ||
+    "";
+
   const headers = getHeaders(origin);
 
   if (allowedOrigin && origin && origin !== allowedOrigin) {
-    return reply(403, { error: "Origin not allowed." }, headers);
+    return reply(403, {
+      error: "Origin not allowed."
+    }, headers);
   }
 
-  if (request.httpMethod === "OPTIONS") {
+  if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 204,
       headers,
@@ -98,7 +111,7 @@ export default async (request) => {
     };
   }
 
-  if (request.httpMethod !== "POST") {
+  if (event.httpMethod !== "POST") {
     return reply(405, {
       error: "Method not allowed."
     }, headers);
@@ -108,7 +121,8 @@ export default async (request) => {
     process.env.SUPABASE_URL || ""
   ).replace(/\/+$/, "");
 
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!projectUrl || !serviceKey) {
     return reply(500, {
@@ -117,8 +131,8 @@ export default async (request) => {
   }
 
   const authorization =
-    request.headers?.authorization ||
-    request.headers?.Authorization ||
+    event.headers?.authorization ||
+    event.headers?.Authorization ||
     "";
 
   const match = authorization.match(/^Bearer\s+(.+)$/i);
@@ -132,7 +146,7 @@ export default async (request) => {
   let input;
 
   try {
-    input = JSON.parse(request.body || "{}");
+    input = JSON.parse(event.body || "{}");
   } catch {
     return reply(400, {
       error: "Invalid JSON request."
@@ -153,9 +167,9 @@ export default async (request) => {
   let createdUserId = null;
 
   try {
-    // 1. Validate the administrator's access token.
+    // 1. Verify administrator session.
     const caller = await supabaseRequest("/auth/v1/user", {
-      token: match[1],
+      token: match[1].trim(),
       serviceKey,
       projectUrl
     });
@@ -166,7 +180,7 @@ export default async (request) => {
       }, headers);
     }
 
-    // 2. Confirm active administrator role.
+    // 2. Verify active administrator profile.
     const profiles = await supabaseRequest(
       `/rest/v1/profiles?id=eq.${encodeURIComponent(caller.id)}&select=id,role,is_active`,
       { serviceKey, projectUrl }
@@ -208,8 +222,9 @@ export default async (request) => {
       }, headers);
     }
 
-    // 4. Generate an available username.
+    // 4. Generate a unique username.
     const base = makeBaseUsername(teacher.full_name);
+
     let username = "";
     let available = false;
 
@@ -236,8 +251,7 @@ export default async (request) => {
       }, headers);
     }
 
-    // 5. Create the Auth account.
-    // The teacher signs in using username + password.
+    // 5. Create Supabase Auth account.
     const authEmail = `${username}@stepupacademy.test`;
 
     const temporaryPassword =
@@ -266,7 +280,7 @@ export default async (request) => {
       throw new Error("Account creation could not be verified.");
     }
 
-    // 6. Link the profile and enforce first-login password change.
+    // 6. Link the new Auth profile.
     const updatedProfiles = await supabaseRequest(
       `/rest/v1/profiles?id=eq.${encodeURIComponent(createdUserId)}`,
       {
@@ -281,12 +295,14 @@ export default async (request) => {
       }
     );
 
-    if (!Array.isArray(updatedProfiles) ||
-        updatedProfiles.length !== 1) {
+    if (
+      !Array.isArray(updatedProfiles) ||
+      updatedProfiles.length !== 1
+    ) {
       throw new Error("Teacher profile could not be linked.");
     }
 
-    // 7. Link the teacher record only if it is still unlinked.
+    // 7. Link teacher record only if still unlinked.
     const updatedTeachers = await supabaseRequest(
       `/rest/v1/teachers?id=eq.${encodeURIComponent(teacherId)}&profile_id=is.null`,
       {
@@ -299,12 +315,14 @@ export default async (request) => {
       }
     );
 
-    if (!Array.isArray(updatedTeachers) ||
-        updatedTeachers.length !== 1) {
+    if (
+      !Array.isArray(updatedTeachers) ||
+      updatedTeachers.length !== 1
+    ) {
       throw new Error("Teacher record could not be linked.");
     }
 
-    // 8. Return the temporary password only once.
+    // 8. Return temporary password once.
     return reply(200, {
       success: true,
       teacher_name: teacher.full_name,
@@ -315,7 +333,9 @@ export default async (request) => {
     }, headers);
 
   } catch (error) {
-    // Roll back the Auth account if database linking failed.
+    console.error("Create teacher account error:", error);
+
+    // Roll back newly created Auth account.
     if (createdUserId) {
       try {
         await supabaseRequest(
@@ -326,8 +346,8 @@ export default async (request) => {
             projectUrl
           }
         );
-      } catch {
-        // Preserve the original error.
+      } catch (rollbackError) {
+        console.error("Teacher account rollback failed.");
       }
     }
 
