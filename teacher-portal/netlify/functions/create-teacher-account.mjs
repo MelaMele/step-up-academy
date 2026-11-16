@@ -1,9 +1,17 @@
 
 import { randomUUID } from "node:crypto";
 
-const allowedOrigin = process.env.TEACHER_PORTAL_ORIGIN || "";
+// Allow both Vercel Production and Preview origins.
+const allowedOrigins = (
+  process.env.TEACHER_PORTAL_ORIGIN || ""
+)
+  .split(",")
+  .map(origin => origin.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
 
 function getHeaders(origin = "") {
+  const normalizedOrigin = origin.replace(/\/+$/, "");
+
   const headers = {
     "Access-Control-Allow-Headers": "authorization, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -12,8 +20,8 @@ function getHeaders(origin = "") {
     "Vary": "Origin"
   };
 
-  if (allowedOrigin && origin === allowedOrigin) {
-    headers["Access-Control-Allow-Origin"] = allowedOrigin;
+  if (allowedOrigins.includes(normalizedOrigin)) {
+    headers["Access-Control-Allow-Origin"] = normalizedOrigin;
   }
 
   return headers;
@@ -95,14 +103,20 @@ export const handler = async (event) => {
     event.headers?.Origin ||
     "";
 
+  const normalizedOrigin = origin.replace(/\/+$/, "");
   const headers = getHeaders(origin);
 
-  if (allowedOrigin && origin && origin !== allowedOrigin) {
+  // Reject requests from origins that are not explicitly allowed.
+  if (
+    origin &&
+    !allowedOrigins.includes(normalizedOrigin)
+  ) {
     return reply(403, {
       error: "Origin not allowed."
     }, headers);
   }
 
+  // Handle browser CORS preflight requests.
   if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 204,
@@ -335,7 +349,7 @@ export const handler = async (event) => {
   } catch (error) {
     console.error("Create teacher account error:", error);
 
-    // Roll back newly created Auth account.
+    // Roll back newly created Auth account if linking failed.
     if (createdUserId) {
       try {
         await supabaseRequest(
