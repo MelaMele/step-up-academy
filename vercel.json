@@ -5,9 +5,16 @@
     {
       "src": "index.html",
       "use": "@vercel/static"
+    },
+    {
+      "src": "step_up_academy_logo.jpeg",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
+    {
+      "handle": "filesystem"
+    },
     {
       "src": "/(.*)",
       "dest": "/index.html"
