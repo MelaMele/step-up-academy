@@ -78,7 +78,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
 <section id="panel-subjects" class="card hidden"><h2>Subjects</h2><div class="tablewrap"><table><thead><tr><th>Subject</th><th>Grade</th><th>Active</th></tr></thead><tbody id="subjectsBody"></tbody></table></div></section>
 <section id="panel-teachers" class="card hidden">
 <h2>Teacher Management / የመምህራን አስተዳደር</h2>
-<p class="muted">መምህር መመዝገቢያና የክፍል/ትምህርት ድልድል። ይህ ክፍል የመምህር መረጃን ብቻ ይመዘግባል፤ የLogin መለያ በደህንነቱ የተጠበቀ የServer አገልግሎት ከተዘጋጀ በኋላ ይገናኛል።</p>
+<p class="muted">መምህር መመዝገቢያ፣ የክፍል/ትምህርት ድልድል እና የደህንነት የLogin መለያ መፍጠሪያ።</p>
 <section class="mpp-group"><h3>Register Teacher / መምህር መዝግብ</h3>
 <div class="grid">
 <div><label>Full name *</label><input id="teacherName" maxlength="150" placeholder="Teacher full name"></div>
@@ -93,6 +93,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
 <div><label>Class</label><select id="assignmentClass"></select></div>
 <div><label>Subject</label><select id="assignmentSubject"></select></div>
 </div><button id="addAssignmentBtn">Add Assignment</button><div id="assignmentMsg" class="status"></div></section>
+<div id="teacherLoginResult" class="status hidden" aria-live="polite"></div>
 <h3>Registered Teachers</h3><div class="tablewrap"><table><thead><tr><th>Employee No.</th><th>Full name</th><th>Phone</th><th>Email</th><th>Active</th><th>Login</th></tr></thead><tbody id="teachersBody"></tbody></table></div>
 <h3 style="margin-top:20px">Current Assignments</h3><div class="tablewrap"><table><thead><tr><th>Teacher</th><th>Class</th><th>Subject</th><th>Year</th><th>Action</th></tr></thead><tbody id="assignmentsBody"></tbody></table></div>
 </section>
@@ -213,13 +214,70 @@ async function loadTeacherData(){
  opt($('assignmentClass'),classes,c=>c.grade_name+' '+c.section,c=>c.id);
  filterAssignmentSubjects();
  $('assignmentClass').onchange=filterAssignmentSubjects;
- $('teachersBody').innerHTML=teachers.map(t=>`<tr><td>${esc(t.employee_number||'—')}</td><td>${esc(t.full_name)}</td><td>${esc(t.phone||'—')}</td><td>${esc(t.email||'—')}</td><td>${t.is_active?'Yes':'No'}</td><td>${t.profile_id?'Linked':'Not linked'}</td></tr>`).join('')||'<tr><td colspan="6">No teachers registered.</td></tr>';
+ $('teachersBody').innerHTML=teachers.map(t=>`<tr>
+ <td>${esc(t.employee_number||'—')}</td>
+ <td>${esc(t.full_name)}</td>
+ <td>${esc(t.phone||'—')}</td>
+ <td>${esc(t.email||'—')}</td>
+ <td>${t.is_active?'Yes':'No'}</td>
+ <td>${t.profile_id?'Linked':(t.is_active?`<button data-create-login="${esc(t.id)}">Create Login</button>`:'Inactive')}</td>
+ </tr>`).join('')||'<tr><td colspan="6">No teachers registered.</td></tr>';
+ document.querySelectorAll('[data-create-login]').forEach(b=>{
+  b.onclick=()=>createTeacherLogin(b.dataset.createLogin,b);
+ });
  $('assignmentsBody').innerHTML=(ar.data||[]).map(a=>{
   const t=teachers.find(x=>x.id===a.teacher_id),c=classes.find(x=>x.id===a.class_id),u=subjects.find(x=>x.id===a.subject_id),y=years.find(x=>x.id===a.academic_year_id);
   return `<tr><td>${esc(t?.full_name||'Unknown')}</td><td>${esc((c?.grade_name||'')+' '+(c?.section||''))}</td><td>${esc(u?.subject_name||'Unknown')}</td><td>${esc(y?.year_name||'Unknown')}</td><td><button class="danger" data-delete-assignment="${esc(a.id)}">Remove</button></td></tr>`;
  }).join('')||'<tr><td colspan="5">No assignments registered.</td></tr>';
  document.querySelectorAll('[data-delete-assignment]').forEach(b=>b.onclick=()=>deleteAssignment(b.dataset.deleteAssignment));
  $('teacherCount').textContent=teachers.length;
+}
+async function createTeacherLogin(teacherId,button){
+ const teacher=teachers.find(t=>t.id===teacherId);
+ if(!teacher)return;
+ if(!confirm(`Create a login account for ${teacher.full_name}?\n\nA temporary password will be generated and shown once.`))return;
+ button.disabled=true;
+ button.textContent='Creating…';
+ const result=$('teacherLoginResult');
+ result.className='status';
+ result.textContent='የመምህሩ Login መለያ በመፍጠር ላይ…';
+ try{
+  const {data:sessionData,error:sessionError}=await sb.auth.getSession();
+  if(sessionError)throw sessionError;
+  const token=sessionData?.session?.access_token;
+  if(!token)throw new Error('የAdmin መግቢያ ጊዜው አብቅቷል። እንደገና Login አድርግ።');
+  const response=await fetch('https://step-up-teacher-portal.netlify.app/.netlify/functions/create-teacher-account',{
+   method:'POST',
+   headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+   body:JSON.stringify({teacher_id:teacherId})
+  });
+  let data=null;
+  try{data=await response.json()}catch{}
+  if(!response.ok||!data?.success)throw new Error(data?.error||`Server error (${response.status}).`);
+  result.textContent='';
+  const heading=document.createElement('strong');
+  heading.textContent='Login account created successfully';
+  const details=document.createElement('div');
+  details.style.marginTop='8px';
+  details.textContent=`Teacher: ${data.teacher_name}\nUsername: ${data.username}\nTemporary password: ${data.temporary_password}\n\nThe teacher must change this password at first login. Save these details now; the temporary password will not be shown again.`;
+  const copy=document.createElement('button');
+  copy.type='button';
+  copy.className='secondary';
+  copy.textContent='Copy login details';
+  copy.onclick=async()=>{
+   const text=`Teacher: ${data.teacher_name}\nUsername: ${data.username}\nTemporary password: ${data.temporary_password}\nThe teacher must change this password at first login.`;
+   try{await navigator.clipboard.writeText(text);copy.textContent='Copied';}
+   catch{window.prompt('Copy these login details:',text);}
+  };
+  result.append(heading,details,copy);
+  result.className='status ok';
+  await loadTeacherData();
+ }catch(error){
+  result.textContent='Login account was not created: '+(error.message||'Unknown error');
+  result.className='status error';
+  button.disabled=false;
+  button.textContent='Create Login';
+ }
 }
 function filterAssignmentSubjects(){
  const cl=classes.find(x=>x.id===$('assignmentClass').value);
