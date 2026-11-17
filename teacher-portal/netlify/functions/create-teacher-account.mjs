@@ -1,7 +1,8 @@
 
 import { randomUUID } from "node:crypto";
 
-// Allow both Vercel Production and Preview origins.
+// Allowed Admin application origins.
+// Do not include paths or query strings.
 const allowedOrigins = (
   process.env.TEACHER_PORTAL_ORIGIN || ""
 )
@@ -106,18 +107,27 @@ export const handler = async (event) => {
   const normalizedOrigin = origin.replace(/\/+$/, "");
   const headers = getHeaders(origin);
 
-  // Reject requests from origins that are not explicitly allowed.
-  if (
-    origin &&
-    !allowedOrigins.includes(normalizedOrigin)
-  ) {
-    return reply(403, {
-      error: "Origin not allowed."
-    }, headers);
-  }
+  // Diagnostic log. Does not expose secrets or tokens.
+  console.log("CREATE_TEACHER_ACCOUNT_DIAGNOSTIC", {
+    method: event.httpMethod,
+    origin,
+    allowedOrigins,
+    originAllowed:
+      !origin || allowedOrigins.includes(normalizedOrigin),
+    hasAuthorization: Boolean(
+      event.headers?.authorization ||
+      event.headers?.Authorization
+    )
+  });
 
-  // Handle browser CORS preflight requests.
+  // Handle CORS preflight.
   if (event.httpMethod === "OPTIONS") {
+    if (origin && !allowedOrigins.includes(normalizedOrigin)) {
+      return reply(403, {
+        error: "Origin not allowed."
+      }, headers);
+    }
+
     return {
       statusCode: 204,
       headers,
@@ -125,9 +135,20 @@ export const handler = async (event) => {
     };
   }
 
+  // Only POST is supported.
   if (event.httpMethod !== "POST") {
     return reply(405, {
       error: "Method not allowed."
+    }, headers);
+  }
+
+  // Reject unapproved origins.
+  if (
+    origin &&
+    !allowedOrigins.includes(normalizedOrigin)
+  ) {
+    return reply(403, {
+      error: "Origin not allowed."
     }, headers);
   }
 
@@ -210,7 +231,7 @@ export const handler = async (event) => {
       }, headers);
     }
 
-    // 3. Find the teacher record.
+    // 3. Find teacher record.
     const teachers = await supabaseRequest(
       `/rest/v1/teachers?id=eq.${encodeURIComponent(teacherId)}&select=id,profile_id,full_name,employee_number,is_active`,
       { serviceKey, projectUrl }
@@ -236,7 +257,7 @@ export const handler = async (event) => {
       }, headers);
     }
 
-    // 4. Generate a unique username.
+    // 4. Generate unique username.
     const base = makeBaseUsername(teacher.full_name);
 
     let username = "";
@@ -294,7 +315,7 @@ export const handler = async (event) => {
       throw new Error("Account creation could not be verified.");
     }
 
-    // 6. Link the new Auth profile.
+    // 6. Link Auth profile.
     const updatedProfiles = await supabaseRequest(
       `/rest/v1/profiles?id=eq.${encodeURIComponent(createdUserId)}`,
       {
@@ -313,7 +334,9 @@ export const handler = async (event) => {
       !Array.isArray(updatedProfiles) ||
       updatedProfiles.length !== 1
     ) {
-      throw new Error("Teacher profile could not be linked.");
+      throw new Error(
+        "Teacher profile could not be linked. Check the profile creation trigger."
+      );
     }
 
     // 7. Link teacher record only if still unlinked.
@@ -347,7 +370,10 @@ export const handler = async (event) => {
     }, headers);
 
   } catch (error) {
-    console.error("Create teacher account error:", error);
+    console.error("Create teacher account error:", {
+      message: error.message,
+      status: error.status || null
+    });
 
     // Roll back newly created Auth account if linking failed.
     if (createdUserId) {
@@ -361,7 +387,9 @@ export const handler = async (event) => {
           }
         );
       } catch (rollbackError) {
-        console.error("Teacher account rollback failed.");
+        console.error("Teacher account rollback failed:", {
+          message: rollbackError.message
+        });
       }
     }
 
@@ -374,7 +402,7 @@ export const handler = async (event) => {
         ? "Your administrator session is invalid. Please sign in again."
         : status === 409
           ? "This account may already exist. Refresh and check the teacher record."
-          : "Could not safely create the teacher account. Please try again or contact the system administrator."
+          : "Could not safely create the teacher account. Check the Function logs for the diagnostic error."
     }, headers);
   }
 };
